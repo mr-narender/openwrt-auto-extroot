@@ -6,11 +6,11 @@ firmware image using
 [ImageBuilder](https://openwrt.org/docs/guide-user/additional-software/imagebuilder).
 
 If the generated image is flashed on a router, then during its boot
-process it will try to automatically set up
+process it will try to set up
 [extroot](https://openwrt.org/docs/guide-user/additional-software/extroot_configuration)
-on **any (!)** storage device plugged into the USB port (`/dev/sda`),
-including your already working extroot pendrive if you plug it in too
-late in the boot process.
+on **any (!)** storage device plugged into the USB port. Put another
+way, it unconditionally reformats `/dev/sda` if it fails to mount an
+extroot early in the boot process.
 
 # Why
 
@@ -99,9 +99,9 @@ Once connected, you can read the log with `logread -f`.
 # Status
 
 This is more of a template than something standalone, but I use it for
-my home routers as is. For more specific applications you most
-probably want to customize this script here and there; search for
-`CUSTOMIZE` for places of interest.
+my home routers as is for years now. For more specific applications
+you most probably want to customize this script here and there; search
+for `CUSTOMIZE` for places of interest.
 
 Most importantly, **set up a password and maybe add your ssh key** by
 adding it to `image-extras/common/etc/dropbear/authorized_keys`.
