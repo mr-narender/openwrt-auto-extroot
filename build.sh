@@ -16,7 +16,7 @@ BUILD="$(readlink -f "${BUILD}")"
 ###
 ### chose a release
 ###
-RELEASE="23.05.2"
+RELEASE="23.05.4"
 
 IMGBUILDER_NAME="openwrt-imagebuilder-${RELEASE}-${TARGET_ARCHITECTURE}-${TARGET_VARIANT}.Linux-x86_64"
 IMGBUILDER_DIR="${BUILD}/${IMGBUILDER_NAME}"
@@ -56,6 +56,9 @@ PREINSTALLED_PACKAGES+=" wireless-tools firewall4"
 PREINSTALLED_PACKAGES+=" kmod-usb-storage-extras kmod-mmc"
 PREINSTALLED_PACKAGES+=" ppp ppp-mod-pppoe ppp-mod-pppol2tp ppp-mod-pptp kmod-ppp kmod-pppoe"
 PREINSTALLED_PACKAGES+=" luci"
+
+# Add MMC-related kernel modules to PREINSTALLED_PACKAGES
+PREINSTALLED_PACKAGES+=" kmod-mmc kmod-sdhci kmod-sdhci-mt7620"
 
 # you exclude packages with this to shrink the image for
 # routers with smaller flash storage.

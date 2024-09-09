@@ -4,24 +4,36 @@
 
 . /root/autoprovision-functions.sh
 
-getPendriveSize()
-{
+# set a dafault device path
+DEFAULT_DEVICE_PATH="/dev/sda"
+DEFAULT_DEVICE_FIRST_PARTITION_PATH="${DEFAULT_DEVICE_PATH}1"
+DEFAULT_DEVICE_SECOND_PARTITION_PATH="${DEFAULT_DEVICE_PATH}2"
+DEFAULT_DEVICE_THIRD_PARTITION_PATH="${DEFAULT_DEVICE_PATH}3"
+
+# if mmc is detected, use /dev/mmcblk0
+if [ -e "/dev/mmcblk0" ]; then
+    DEFAULT_DEVICE_PATH="/dev/mmcblk0"
+    DEFAULT_DEVICE_FIRST_PARTITION_PATH="${DEFAULT_DEVICE_PATH}p1"
+    DEFAULT_DEVICE_SECOND_PARTITION_PATH="${DEFAULT_DEVICE_PATH}p2"
+    DEFAULT_DEVICE_THIRD_PARTITION_PATH="${DEFAULT_DEVICE_PATH}p3"
+fi
+
+getPendriveSize() {
     # this is needed for the mmc card in some (all?) Huawei 3G dongle.
     # details: https://dev.openwrt.org/ticket/10716#comment:4
-    if [ -e /dev/sda ]; then
+    if [ -e "${DEFAULT_DEVICE_PATH}" ]; then
         # force re-read of the partition table
-        head -c 1024 /dev/sda >/dev/null
+        head -c 1024 "${DEFAULT_DEVICE_PATH}" >/dev/null
     fi
 
-    if (grep -q sda /proc/partitions) then
+    if (grep -q sda /proc/partitions); then
         cat /sys/block/sda/size
     else
         echo 0
     fi
 }
 
-hasBigEnoughPendrive()
-{
+hasBigEnoughPendrive() {
     local size=$(getPendriveSize)
     if [ $size -ge 100000 ]; then
         log "Found a pendrive of size: $(($size / 2 / 1024)) MB"
@@ -31,17 +43,15 @@ hasBigEnoughPendrive()
     fi
 }
 
-rereadPartitionTable()
-{
+rereadPartitionTable() {
     log "Rereading partition table"
-    blockdev --rereadpt /dev/sda
+    blockdev --rereadpt "${DEFAULT_DEVICE_PATH}"
 }
 
-setupPendrivePartitions()
-{
+setupPendrivePartitions() {
     log "Erasing partition table"
     # erase partition table
-    dd if=/dev/zero of=/dev/sda bs=1k count=256
+    dd if=/dev/zero of="${DEFAULT_DEVICE_PATH}" bs=1k count=256
 
     rereadPartitionTable
 
@@ -49,7 +59,7 @@ setupPendrivePartitions()
     # sda1 is 'swap'
     # sda2 is 'root'
     # sda3 is 'data', if there's any space left
-    fdisk /dev/sda <<EOF
+    fdisk "${DEFAULT_DEVICE_PATH}" <<EOF
 o
 n
 p
@@ -72,25 +82,23 @@ t
 w
 q
 EOF
-    log "Finished partitioning /dev/sda using fdisk"
+    log "Finished partitioning "${DEFAULT_DEVICE_PATH}" using fdisk"
 
     rereadPartitionTable
 
-    until [ -e /dev/sda1 ]
-    do
+    until [ -e "${DEFAULT_DEVICE_FIRST_PARTITION_PATH}" ]; do
         echo "Waiting for partitions to show up in /dev"
         sleep 1
     done
 
-    mkswap -L swap -U $swapUUID /dev/sda1
-    mkfs.ext4 -F -L root -U $rootUUID /dev/sda2
-    mkfs.ext4 -F -L data -U $dataUUID /dev/sda3
+    mkswap -L swap -U $swapUUID "${DEFAULT_DEVICE_FIRST_PARTITION_PATH}"
+    mkfs.ext4 -F -L root -U $rootUUID "${DEFAULT_DEVICE_SECOND_PARTITION_PATH}"
+    mkfs.ext4 -F -L data -U $dataUUID "${DEFAULT_DEVICE_THIRD_PARTITION_PATH}"
 
     log "Finished setting up filesystems"
 }
 
-setupExtroot()
-{
+setupExtroot() {
     mkdir -p /mnt/extroot/
     mount -U $rootUUID /mnt/extroot
 
@@ -109,19 +117,18 @@ EOF
     # TODO FIXME when this below is enabled then Chaos Calmer doesn't turn on the network and the device remains unreachable
 
     # make sure that we shadow the /var -> /tmp symlink in the new extroot, so that /var becomes persistent across reboots.
-#    mkdir -p ${overlay_root}/var
+    #    mkdir -p ${overlay_root}/var
     # KLUDGE: /var/state is assumed to be transient, so link it to tmp, see https://dev.openwrt.org/ticket/12228
-#    cd ${overlay_root}/var
-#    ln -s /tmp state
-#    cd -
+    #    cd ${overlay_root}/var
+    #    ln -s /tmp state
+    #    cd -
 
     disableStage1
 
     log "Finished setting up extroot"
 }
 
-disableStage1()
-{
+disableStage1() {
     # FIXME it would be more future-proof to transform the rc.local file
     # instead of overwriting it.
     cat >/etc/rc.local <<EOF
@@ -137,15 +144,13 @@ exit 0
 EOF
 }
 
-autoprovisionStage1()
-{
+autoprovisionStage1() {
     signalAutoprovisionWorking
 
     signalAutoprovisionWaitingForUser
     signalWaitingForPendrive
 
-    until hasBigEnoughPendrive
-    do
+    until hasBigEnoughPendrive; do
         echo "Waiting for a pendrive to be inserted"
         sleep 3
     done

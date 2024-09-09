@@ -1,152 +1,106 @@
-# What
+What
 
-It's a script to build a customized
-[OpenWrt](https://openwrt.org/docs/guide-user/start)
-firmware image using
-[ImageBuilder](https://openwrt.org/docs/guide-user/additional-software/imagebuilder).
+This script builds a customized OpenWrt firmware image using ImageBuilder.
 
-If the generated image is flashed on a router, then during its boot
-process it will try to set up
-[extroot](https://openwrt.org/docs/guide-user/additional-software/extroot_configuration)
-on **any (!)** storage device plugged into the USB port. Put another
-way, it unconditionally reformats `/dev/sda` if it fails to mount an
-extroot early in the boot process.
+If the generated image is flashed on a router, the boot process will attempt to set up extroot on any storage device plugged into the USB port or MMC device. It unconditionally reformats /dev/sda or /dev/mmcblk0 if it fails to mount an extroot early in the boot process.
 
-# Why
+Why
 
-So that e.g. customers can buy a router on their own, download and flash our custom
-firmware, plug in a pendrive, and manage their SIP (telephony) node
-from our webapp.
+This allows users (e.g., customers) to buy a router, download and flash custom firmware, plug in a USB drive or MMC card, and manage their SIP (telephony) node from a web app.
 
-I've extracted the generic parts from the above mentioned auto-provision
-project because I thought it's useful enough for making it public.
+This script was extracted from an auto-provision project, generalized for public use, and has worked reliably on my own routers for years.
 
-It also serves me well on my own routers ever since then.
+How
 
-# How
+You can learn more about OpenWrt's ImageBuilder and extroot setup from the OpenWrt wiki and ImageBuilder frontends.
 
-You can read more about the underlying technology on the OpenWrt wiki: see e.g. the
-[ImageBuilder](https://openwrt.org/docs/guide-user/additional-software/imagebuilder)
-page, or the page that lists some other
-[ImageBuilder frontends](https://openwrt.org/docs/guide-developer/imagebuilder_frontends).
+Device Detection
+The script now supports both USB and MMC devices for setting up extroot. It defaults to /dev/sda for USB devices and automatically switches to /dev/mmcblk0 if an MMC card is detected.
 
-As for the actual mechanism: custom scripts are baked into the boot
-process of the flashed firmware. If the extroot overlay is properly
-set up, then these scripts get hidden by it; i.e. they will only be run
-when the extroot has failed to mount early in the boot process.
+bash
 
-Keep in mind that **this will automatically erase/format any inserted
-storage device while the router is in the initial setup phase**!
-Unfortunately there's little that can be done at that point to ask the
-user for confirmation.
+```
+# Default device paths for USB
 
-### Building
+DEFAULT_DEVICE_PATH="/dev/sda"
+DEFAULT_DEVICE_FIRST_PARTITION_PATH="${DEFAULT_DEVICE_PATH}1"
+DEFAULT_DEVICE_SECOND_PARTITION_PATH="${DEFAULT_DEVICE_PATH}2"
+DEFAULT_DEVICE_THIRD_PARTITION_PATH="${DEFAULT_DEVICE_PATH}3"
 
-OpenWrt's ImageBuilder only works on Linux x86_64. To build a firmware, issue the following command:
-`./build.sh architecture variant device-profile`, e.g.:
+# Use MMC device paths if detected
 
-* `./build.sh ath79 generic tplink_tl-wr1043nd-v1`
-* `./build.sh ath79 generic tplink_archer-c6-v2`
-* `./build.sh ath79 generic tplink_tl-wdr4300-v1`
-* `./build.sh bcm53xx generic dlink_dir-885l`
+if [ -e "/dev/mmcblk0" ]; then
+DEFAULT_DEVICE_PATH="/dev/mmcblk0"
+DEFAULT_DEVICE_FIRST_PARTITION_PATH="${DEFAULT_DEVICE_PATH}p1"
+    DEFAULT_DEVICE_SECOND_PARTITION_PATH="${DEFAULT_DEVICE_PATH}p2"
+DEFAULT_DEVICE_THIRD_PARTITION_PATH="${DEFAULT_DEVICE_PATH}p3"
+fi
+Build Instructions
+OpenWrt's ImageBuilder only works on Linux x86_64. To build a firmware, use the following command:
+```
+bash
+```
+./build.sh architecture variant device-profile
+Example builds:
 
-Results will be under `build/openwrt-imagebuilder-${release}-${architecture}-${variant}.Linux-x86_64/bin/`.
+./build.sh ath79 generic tplink_tl-wr1043nd-v1
+./build.sh ath79 generic tplink_archer-c6-v2
+./build.sh ath79 generic tplink_tl-wdr4300-v1
+./build.sh bcm53xx generic dlink_dir-885l
+```
 
-To see a list of available targets, run `make info` in the ImageBuilder dir.
+The results will be under build/openwrt-imagebuilder-${release}-${architecture}-${variant}.Linux-x86_64/bin/.
 
-If you want to change which OpenWrt version is used, then try editing
-the relevant variable(s) in `build.sh`. It's not guaranteed to work
-across OpenWrt releases, therefore we keep git branches for the past
-releases.
+To list available targets, run make info in the ImageBuilder directory.
 
-### Setup stages
+If you want to change the OpenWrt version used, modify the relevant variable(s) in build.sh.
 
-Blinking leds show which phase the extroot setup scripts are in. Consult the
-sources for details: [autoprovision-functions.sh](image-extras/common/root/autoprovision-functions.sh#L49).
+Setup Stages
+The boot process has multiple stages indicated by blinking LEDs. The following describes the stages during extroot setup.
 
-#### Stage 1: setup extroot
+Stage 1: Setup Extroot
 
-When the custom firmware first boots, the autoprovision script will
-wait for anything (!) in `/dev/sda` to show up (that is >= 512M), then erase
-it and set up a `swap`, an `extroot`, and a `data`filesystem (for the remaining
-space), and then reboot.
+When the firmware first boots, the autoprovision script waits for a storage device (USB or MMC) at /dev/sda or /dev/mmcblk0 with at least 512MB. If found, the device will be erased, and partitions for swap, extroot, and data will be set up. Then, the system reboots.
 
-#### Stage 2: download and install some packages from the internet
+Stage 2: Install Packages
 
-Once it rebooted into the new extroot, it will continuously keep trying to install
-some OpenWrt packages until an internet connection is set up on the router. You
-need to do that manually either by using ssh or the web UI (LuCI).
+After rebooting into the new extroot, the script will continuously attempt to install OpenWrt packages until an internet connection is established. This must be done manually via SSH or LuCI (OpenWrt's web UI).
 
-#### Stage 3, optional
+Stage 3 (Optional)
 
-We also have a 3rd stage, written in Python, but it's commented out here.
-Search for `autoprovision-stage3.py` to see how it's done.
+There is an optional third stage written in Python, which is commented out by default. Check for autoprovision-stage3.py in the code for more details.
 
-### Login
+Login
+The default router IP is 192.168.1.1. The root password is not set initially, allowing telnet access. To set a password, edit the autoprovision-stage2.sh script.
 
-After flashing the firmware the router will have the standard
-`192.168.1.1` IP address.
+Once a password is set, telnet is disabled, and SSH will be available using keys specified in authorized_keys.
 
-By default the root passwd is not set, so the router will start telnet with
-no password. If you want to set up a password, then edit the stage 2 script:
-[autoprovision-stage2.sh](image-extras/common/root/autoprovision-stage2.sh#L53).
+Use logread -f to monitor logs.
 
-If a password is set, then telnet is disabled by OpenWrt and SSH will listen
-using the keys specified in [authorized_keys](image-extras/common/etc/dropbear/authorized_keys).
+Status
 
-Once connected, you can read the log with `logread -f`.
+This script serves as a template, but has been used on home routers for years. Customize as needed by searching for CUSTOMIZE in the code. Ensure that a password is set and SSH keys are added to image-extras/common/etc/dropbear/authorized_keys.
 
-# Status
+The script is hardware-agnostic except for setLedAttribute, which provides progress feedback using LEDs. This only works on certain routers, mainly ath79, but does not affect functionality if unavailable.
 
-This is more of a template than something standalone, but I use it for
-my home routers as is for years now. For more specific applications
-you most probably want to customize this script here and there; search
-for `CUSTOMIZE` for places of interest.
+Troubleshooting
 
-Most importantly, **set up a password and maybe add your ssh key** by
-adding it to `image-extras/common/etc/dropbear/authorized_keys`.
+Which Firmware File to Flash?
 
-None of this script is hardware specific except `setLedAttribute`,
-which is used to provide feedback about the progress of the initial
-setup phase. At the time of writing it only works on a few routers
-(mostly `ath79` ones), but without this everything should work fine,
-if only a bit less convenient.
+Refer to OpenWrt's documentation. The generated firmware files can be found under:
 
-# Troubleshooting
+bash
+```
+./build/openwrt-imagebuilder-${release}-${architecture}-${variant}.Linux-x86_64/bin/targets/${architecture}/${variant}/
+```
+Choose the correct file for your hardware version (-factory.bin for first-time installs, -sysupgrade.bin for upgrades).
 
-## Which file should I flash?
+No Firmware File Generated?
 
-You should consult the [OpenWrt documentation](https://openwrt.org/docs/guide-user/start).
-The produced firmware files should be somewhere around
-```./build/openwrt-imagebuilder-21.02.0-ath79-generic.Linux-x86_64/bin/targets/ath79/generic/```.
+If the build does not generate a firmware file, it might be due to insufficient space in the device's flash memory. Remove unnecessary packages from the build.sh script and try again.
 
-In short:
+Extroot Issues After sysupgrade
 
-* You need a file with the name ```-factory.bin``` or ```-sysupgrade.bin```. The former is to
-  be used when you first install OpenWrt, the latter is when you upgrade an already installed
-  OpenWrt.
+If the extroot does not mount after upgrading, delete /etc/.extroot-uuid on the mounted extroot. More details can be found in this issue and the related blog post.
 
-* You must carefully pick the proper firmware file for your **hardware version**! I advise you
-  to look up the wiki page for your hardware on the [OpenWrt wiki](https://openwrt.org),
-  because most of them have a table of the released hardware versions with comments on their
-  status (sometimes new hardware revisions are only supported by the latest OpenWrt, which is
-  not released yet).
-
-## Help! The build has finished but there's no firmware file!
-
-If the build doesn't yield a firmware file (```*-factory.bin``` and/or ```*-sysupgrade.bin```):
-when there's not enough space in the flash memory of the target device to install everything
-then the OpenWrt ImageBuilder prints a hardly visible error into its flow of output and
-silently continues. Look into [build.sh](build.sh#L31) and try to remove some packages
-that you can live without.
-
-## Extroot is not mounted after a `sysupgrade`
-
-In short, this is an OpenWrt issue, and the solution is to mount the extroot
-somewhere, and delete `/etc/.extroot-uuid`. More details are available in
-[this issue](https://github.com/attila-lendvai/openwrt-auto-extroot/issues/12),
-and a way to deal with it can be found in
-[this blog post](https://blog.mbirth.de/archives/2014/05/26/openwrt-sysupgrade-with-extroot.html).
-You may also want to check out the
-[official OpenWrt wiki](https://openwrt.org/docs/guide-user/additional-software/extroot_configuration#system_upgrade)
-on this topic.
+For further information, consult the OpenWrt wiki.
