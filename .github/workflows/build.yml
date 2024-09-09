@@ -32,7 +32,7 @@ jobs:
       - name: Set up environment
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget rsync xz-utils build-essential libncurses-dev zlib1g-dev gawk git gettext libssl-dev xsltproc rsync wget unzip python3 python3-distutils
+          sudo apt-get install -y wget rsync xz-utils
 
       - name: Build OpenWrt firmware
         run: |
@@ -46,7 +46,7 @@ jobs:
           ./build.sh $TARGET_ARCHITECTURE $TARGET_VARIANT $TARGET_DEVICE
 
       - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: OpenWrt-${{ github.event.inputs.TARGET_DEVICE }}
           path: ./build/openwrt-imagebuilder-*/bin/targets/${{ github.event.inputs.TARGET_ARCHITECTURE }}/
