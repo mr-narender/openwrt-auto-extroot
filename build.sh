@@ -65,7 +65,7 @@ if [ -d "${TARGET_DIR}" ]; then
     pushd "${TARGET_DIR}"
     ln -sf ../../../packages .
     # List recursively all generated images for verification
-    ls -rla ../../../packages
+    ls -rla ~/work/openwrt-auto-extroot/openwrt-auto-extroot/build/openwrt-imagebuilder-23.05.4-ramips-mt7621.Linux-x86_64/bin/targets/ramips/mt7621/
     popd
 else
     echo "Error: Target directory not found for architecture ${TARGET_ARCHITECTURE}"
