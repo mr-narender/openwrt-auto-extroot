@@ -29,10 +29,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Cache for apt packages
+      - name: Cache apt packages
+        uses: actions/cache@v3
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('build.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
+      # Install dependencies
       - name: Set up environment
         run: |
           sudo apt-get update
           sudo apt-get install -y wget rsync xz-utils
+
+      # Cache OpenWrt build artifacts
+      - name: Cache OpenWrt build directory
+        uses: actions/cache@v3
+        with:
+          path: ./build/
+          key: ${{ runner.os }}-openwrt-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-build-
 
       - name: Build OpenWrt firmware
         run: |
