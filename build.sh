@@ -36,7 +36,7 @@ if [ -z ${TARGET_DEVICE} ]; then
     kill -INT $$
 fi
 
-PREINSTALLED_PACKAGES="block-mount kmod-fs-ext4 kmod-usb-storage blockdev blkid mount-utils swap-utils e2fsprogs fdisk wireless-tools firewall4 kmod-usb-storage-extras kmod-mmc ppp ppp-mod-pppoe ppp-mod-pppol2tp ppp-mod-pptp kmod-ppp kmod-pppoe luci kmod-mmc kmod-sdhci kmod-sdhci-mt7620"
+PREINSTALLED_PACKAGES="parted block-mount kmod-fs-ext4 blockdev blkid mount-utils swap-utils e2fsprogs fdisk wireless-tools firewall4 kmod-usb-storage-extras kmod-mmc ppp ppp-mod-pppoe ppp-mod-pppol2tp ppp-mod-pptp kmod-ppp kmod-pppoe luci kmod-mmc kmod-sdhci kmod-sdhci-mt7620"
 
 mkdir -pv "${BUILD}"
 
@@ -64,8 +64,8 @@ TARGET_DIR=$(find bin/targets/ -type d -name "${TARGET_ARCHITECTURE}" -print -qu
 if [ -d "${TARGET_DIR}" ]; then
     pushd "${TARGET_DIR}"
     ln -sf ../../../packages .
-    # List generated images for verification
-    ls
+    # List recursively all generated images for verification
+    ls -rla
     popd
 else
     echo "Error: Target directory not found for architecture ${TARGET_ARCHITECTURE}"
