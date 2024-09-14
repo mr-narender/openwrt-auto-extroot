@@ -57,7 +57,8 @@ fi
 pushd "${IMGBUILDER_DIR}"
 
 # Generate both sysupgrade and factory images
-make image PROFILE=${TARGET_DEVICE} PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR}
+# make image PROFILE=${TARGET_DEVICE} PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR}
+make image PROFILE=${TARGET_DEVICE} PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR} BIN_DIR=bin/targets/${TARGET_ARCHITECTURE}/${TARGET_VARIANT}/ V=s
 
 # Check for the generated images
 TARGET_DIR=$(find bin/targets/ -type d -name "${TARGET_ARCHITECTURE}" -print -quit)
