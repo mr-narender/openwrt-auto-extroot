@@ -56,11 +56,11 @@ fi
 
 # Inject custom profile for generating factory image
 CUSTOM_PROFILE_DIR="${IMGBUILDER_DIR}/target/linux/${TARGET_ARCHITECTURE}/image/"
-CUSTOM_PROFILE_FILE="${CUSTOM_PROFILE_DIR}/glinet_gl-mt1300-custom.mk"
+CUSTOM_PROFILE_FILE="${CUSTOM_PROFILE_DIR}/glinet_gl-mt1300.mk"
 
 mkdir -p "${CUSTOM_PROFILE_DIR}"
 cat >"${CUSTOM_PROFILE_FILE}" <<EOL
-define Device/glinet_gl-mt1300-custom
+define Device/glinet_gl-mt1300
   DEVICE_VENDOR := GL.iNet
   DEVICE_MODEL := GL-MT1300
   DEVICE_PACKAGES := kmod-mt7615-firmware kmod-usb3
@@ -70,7 +70,7 @@ define Device/glinet_gl-mt1300-custom
   IMAGE/factory.bin := append-ubi | append-metadata
   IMAGE/sysupgrade.bin := append-rootfs | append-metadata
 endef
-TARGET_DEVICES += glinet_gl-mt1300-custom
+TARGET_DEVICES += glinet_gl-mt1300
 EOL
 
 pushd "${IMGBUILDER_DIR}"
@@ -79,7 +79,7 @@ pushd "${IMGBUILDER_DIR}"
 make info | grep "gl"
 
 # Build firmware with both sysupgrade and factory images using the custom profile
-make image PROFILE=glinet_gl-mt1300-custom PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR} BIN_DIR=bin/targets/${TARGET_ARCHITECTURE}/${TARGET_VARIANT}/ V=s
+make image PROFILE=glinet_gl-mt1300 PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR} BIN_DIR=bin/targets/${TARGET_ARCHITECTURE}/${TARGET_VARIANT}/ V=s
 
 # Check for the generated images
 TARGET_DIR=$(find bin/targets/ -type d -name "${TARGET_ARCHITECTURE}" -print -quit)
