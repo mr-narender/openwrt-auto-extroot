@@ -54,29 +54,26 @@ if [ ! -e "${IMGBUILDER_DIR}" ]; then
     popd
 fi
 
-# Inject custom profile for generating factory image
-CUSTOM_PROFILE_DIR="${IMGBUILDER_DIR}/target/linux/${TARGET_ARCHITECTURE}/image/"
-CUSTOM_PROFILE_FILE="${CUSTOM_PROFILE_DIR}/glinet_gl-mt1300-custom.mk"
-
-mkdir -p "${CUSTOM_PROFILE_DIR}"
-cat >"${CUSTOM_PROFILE_FILE}" <<EOL
-define Device/glinet_gl-mt1300-custom
-  DEVICE_VENDOR := GL.iNet
-  DEVICE_MODEL := GL-MT1300
-  DEVICE_PACKAGES := kmod-mt7615-firmware kmod-usb3
-  IMAGE_SIZE := 16064k
-  SUPPORTED_DEVICES := glinet_gl-mt1300
-  IMAGES += factory.bin
-  IMAGE/factory.bin := append-ubi | append-metadata
-  IMAGE/sysupgrade.bin := append-rootfs | append-metadata
-endef
-TARGET_DEVICES += glinet_gl-mt1300-custom
-EOL
+# Inject custom factory image entry into profiles.json for the device
+PROFILES_JSON="${IMGBUILDER_DIR}/profiles.json"
+if [ -e "${PROFILES_JSON}" ]; then
+    echo "Injecting factory image into profiles.json for ${TARGET_DEVICE}..."
+    jq --argjson new_image '{
+        "filesystem": "squashfs",
+        "name": "openwrt-'${RELEASE}'-'${TARGET_ARCHITECTURE}'-'${TARGET_VARIANT}'-'${TARGET_DEVICE}'-factory.bin",
+        "type": "factory"
+    }' \
+        '.profiles[$TARGET_DEVICE].images += [$new_image]' "${PROFILES_JSON}" >"${PROFILES_JSON}.tmp"
+    mv "${PROFILES_JSON}.tmp" "${PROFILES_JSON}"
+else
+    echo "Error: profiles.json not found in ${IMGBUILDER_DIR}."
+    exit 1
+fi
 
 pushd "${IMGBUILDER_DIR}"
 
-# Build firmware with both sysupgrade and factory images using the custom profile
-make image PROFILE=glinet_gl-mt1300-custom PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR} BIN_DIR=bin/targets/${TARGET_ARCHITECTURE}/${TARGET_VARIANT}/ V=s
+# Generate both sysupgrade and factory images
+make image PROFILE=${TARGET_DEVICE} PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR} BIN_DIR=bin/targets/${TARGET_ARCHITECTURE}/${TARGET_VARIANT}/ V=s
 
 # Check for the generated images
 TARGET_DIR=$(find bin/targets/ -type d -name "${TARGET_ARCHITECTURE}" -print -quit)
