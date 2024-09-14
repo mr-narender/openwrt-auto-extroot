@@ -76,10 +76,10 @@ EOL
 pushd "${IMGBUILDER_DIR}"
 
 # run make info to get a list of supported devices and extract gl-mt1300
-make info | grep "gl"
+# make info | grep "gl"
 
 # Build firmware with both sysupgrade and factory images using the custom profile
-make image PROFILE=glinet_gl-mt1300 PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR} BIN_DIR=bin/targets/${TARGET_ARCHITECTURE}/${TARGET_VARIANT}/ V=s
+make image PROFILE=glinet_gl-mt1300 PACKAGES="${PREINSTALLED_PACKAGES}" FILES=${IMGTEMPDIR}
 
 # Check for the generated images
 TARGET_DIR=$(find bin/targets/ -type d -name "${TARGET_ARCHITECTURE}" -print -quit)
